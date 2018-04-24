@@ -182,6 +182,7 @@ public:
   //Metrics methods
   void prepScalarComputation(vtkMRMLScene* scene);
   void setScalarVisibility(bool visible);
+
 };
 
 //-----------------------------------------------------------------------------
@@ -2063,4 +2064,6 @@ void qSlicerPlannerModuleWidget::modelCallback(const QModelIndex &index)
     
     
 }
+
+
 

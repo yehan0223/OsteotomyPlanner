@@ -100,6 +100,9 @@ public:
   void setBendType(BendModeType type) {this->bendMode = type;}
   void setBendSide(BendSide side) { this->bendSide = side; }
 
+  //Instructions
+  void saveModelHierarchyAsMRMLScene(vtkMRMLModelHierarchyNode* HierarchyNode, std::string PlanDirectory);
+
 protected:
   vtkSlicerPlannerLogic();
   virtual ~vtkSlicerPlannerLogic();
@@ -145,11 +148,26 @@ private:
   BendModeType bendMode;
   BendSide bendSide;
 
+  //State saving
+  void AddCompleteModelHierarchyToMiniScene(vtkMRMLScene *miniscene, vtkMRMLModelHierarchyNode *mhnd);
+  bool writeToMRB(vtkMRMLScene * scene, std::string filename);
+  bool SaveSceneToSlicerDataBundleDirectory(const char *sdbDir, vtkMRMLScene *scene);
+  void SaveStorableNodeToSlicerDataBundleDirectory(vtkMRMLStorableNode *storableNode,
+      std::string &dataDir);
+  std::string PercentEncode(std::string s);
+  std::string CreateUniqueFileName(std::string &filename);
+
 
   double preOPICV;
   double healthyBrainICV;
   double currentICV;
   double templateICV;
+
+  std::map<vtkMRMLStorageNode*, std::string> OriginalStorageNodeDirs;
+  /// use a map to store the file names from a storage node, the 0th one is by
+  /// definition the GetFileName returned value, then the rest are at index n+1
+  /// from GetNthFileName(n)
+  std::map<vtkMRMLStorageNode*, std::vector<std::string> > OriginalStorageNodeFileNames;
 
   enum ModelType
   {
