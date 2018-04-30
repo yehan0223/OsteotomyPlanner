@@ -94,6 +94,7 @@ public:
   //Bending functions
   void initializeBend(vtkPoints* inputFiducials, vtkMRMLModelNode* model);
   vtkSmartPointer<vtkThinPlateSplineTransform> getBendTransform(double bendMagnitude);
+  void updateBendTransform(double bendMagnitude);
   void clearBendingData();
   vtkSmartPointer<vtkPoints> getSourcePoints() {return this->SourcePoints;}
   vtkSmartPointer<vtkPoints> getTargetPoints() { return this->TargetPoints; }
@@ -143,6 +144,7 @@ private:
   vtkSmartPointer<vtkCellLocator> BendingPlaneLocator;
   vtkSmartPointer<vtkPlane> BendingPlane;
   vtkSmartPointer<vtkPolyData> BendingPolyData;
+  vtkSmartPointer<vtkThinPlateSplineTransform> BendTransform;
   bool bendInitialized;
   BendModeType bendMode;
   BendSide bendSide;

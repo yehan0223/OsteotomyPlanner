@@ -164,6 +164,7 @@ public:
   bool BendDoubleSide;
   bool BendASide;
   vtkWeakPointer<vtkMRMLScene> scene;
+  vtkSmartPointer<vtkThinPlateSplineTransform> ThinPlateTransform;
 
   //Bending methods
   int beginPlacement(vtkMRMLScene* scene, int id);
@@ -264,6 +265,7 @@ qSlicerPlannerModuleWidgetPrivate::qSlicerPlannerModuleWidgetPrivate()
   this->Fiducials = NULL;
   this->BendMagnitude = 0;
   this->ActivePoint = -1;
+  this->ThinPlateTransform = NULL;
 
   qSlicerAbstractCoreModule* splitModule =
     qSlicerCoreApplication::application()->moduleManager()->module("SplitModel");
@@ -284,7 +286,11 @@ void qSlicerPlannerModuleWidgetPrivate::endPlacement()
 {
 
     //check that point in close to (i.e. on surface of) model to bend
-    //if not, retrigger placing and give it another go  
+    //if not, retrigger placing and give it another go 
+  if (!this->placingActive || this->ActivePoint < 0)
+  {
+        return;
+  }
   
   vtkVector3d point;
   double posa[3];
@@ -394,13 +400,13 @@ void qSlicerPlannerModuleWidgetPrivate::computeTransform(vtkMRMLScene* scene)
   {
     this->logic->setBendSide(vtkSlicerPlannerLogic::B);
   }
-  vtkSmartPointer<vtkThinPlateSplineTransform> tps = this->logic->getBendTransform(this->BendMagnitude);
-  BendingTransformNode->SetAndObserveTransformToParent(tps);
+  this->ThinPlateTransform = this->logic->getBendTransform(this->BendMagnitude);
+  BendingTransformNode->SetAndObserveTransformToParent(this->ThinPlateTransform);
   vtkMRMLModelNode::SafeDownCast(this->CurrentBendNode)->SetAndObserveTransformNodeID(BendingTransformNode->GetID());
 
   //
-  vtkNew<vtkTransformPolyDataFilter> transform;
-  transform->SetTransform(tps);
+ /* vtkNew<vtkTransformPolyDataFilter> transform;
+  transform->SetTransform(this->ThinPlateTransform);
   transform->SetInputData(this->BendingData);
   transform->Update();
   vtkNew<vtkMassProperties> area;
@@ -411,7 +417,7 @@ void qSlicerPlannerModuleWidgetPrivate::computeTransform(vtkMRMLScene* scene)
   std::stringstream surfaceAreaSstr;
   surfaceAreaSstr << area->GetSurfaceArea();
   const std::string& surfaceAreaString= surfaceAreaSstr.str();
-  this->AreaAfterBending->setText(surfaceAreaString.c_str());  
+  this->AreaAfterBending->setText(surfaceAreaString.c_str());*/  
   
 }
 //-----------------------------------------------------------------------------
@@ -1155,6 +1161,7 @@ void qSlicerPlannerModuleWidgetPrivate::hardenTransforms(bool hardenLinearOnly)
         // non-linear transform hardening
         if (!hardenLinearOnly)
         {
+            std::cerr << "Harden bend" << std::endl;
           this->updatePlanesFromModel(childModel->GetScene(), childModel);
           childModel->ApplyTransform(transformNode->GetTransformToParent());
           transformNode->SetAndObserveTransformToParent(NULL);
@@ -1793,9 +1800,7 @@ void qSlicerPlannerModuleWidget::finshBendClicked()
 {
   Q_D(qSlicerPlannerModuleWidget);
   
-  d->hardenTransforms(false);
-  d->BendMagnitude = 0;
-  d->BendMagnitudeSlider->setValue(0);
+  d->hardenTransforms(false);  
   d->clearControlPoints(this->mrmlScene());
   d->clearBendingData(this->mrmlScene());
   d->bendingActive = false;

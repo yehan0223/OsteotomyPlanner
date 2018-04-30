@@ -475,55 +475,62 @@ void vtkSlicerPlannerLogic::initializeBend(vtkPoints* inputFiducials, vtkMRMLMod
 
   this->generateSourcePoints();
   this->bendInitialized =  true;
+
+  this->BendTransform = vtkSmartPointer<vtkThinPlateSplineTransform>::New();
+  this->BendTransform->SetSigma(.0001);
+  this->BendTransform->SetBasisToR();
+  this->BendTransform->SetSourceLandmarks(this->SourcePointsDense);
+}
+
+void vtkSlicerPlannerLogic::updateBendTransform(double magnitude)
+{
+    if (this->bendInitialized)
+    {
+
+        this->TargetPoints = vtkSmartPointer<vtkPoints>::New();
+        for (int i = 0; i < this->SourcePointsDense->GetNumberOfPoints(); i++)
+        {
+            double p[3];
+            this->SourcePointsDense->GetPoint(i, p);
+            vtkVector3d point = (vtkVector3d)p;
+            vtkVector3d bent = point;
+            if (this->bendMode == Double)
+            {
+                bent = this->bendPoint(point, magnitude);
+            }
+            if (this->bendMode == Single)
+            {
+                if (this->bendSide == A)
+                {
+                    if (this->BendingPlane->EvaluateFunction(point.GetData())*this->BendingPlane->EvaluateFunction(this->SourcePoints->GetPoint(0)) > 0)
+                    {
+                        bent = this->bendPoint(point, magnitude);
+                    }
+                }
+                if (this->bendSide == B)
+                {
+                    if (this->BendingPlane->EvaluateFunction(point.GetData())*this->BendingPlane->EvaluateFunction(this->SourcePoints->GetPoint(1)) > 0)
+                    {
+                        bent = this->bendPoint(point, magnitude);
+                    }
+                }
+
+            }
+            this->TargetPoints->InsertPoint(i, bent.GetData());
+        }
+
+
+        this->BendTransform->SetTargetLandmarks(this->TargetPoints);
+        this->BendTransform->Update();
+    }
 }
 
 //----------------------------------------------------------------------------
 //CReate bend transform based on points and bend magnitude
 vtkSmartPointer<vtkThinPlateSplineTransform> vtkSlicerPlannerLogic::getBendTransform(double magnitude)
 {
-  vtkSmartPointer<vtkThinPlateSplineTransform> transform = vtkSmartPointer<vtkThinPlateSplineTransform>::New();
-  if(this->bendInitialized)
-  {
-
-    this->TargetPoints = vtkSmartPointer<vtkPoints>::New();
-    for(int i = 0; i < this->SourcePointsDense->GetNumberOfPoints(); i++)
-    {
-      double p[3];
-      this->SourcePointsDense->GetPoint(i, p);
-      vtkVector3d point = (vtkVector3d)p;
-      vtkVector3d bent = point;
-      if(this->bendMode == Double)
-      {
-        bent = this->bendPoint(point, magnitude);
-      }
-      if(this->bendMode == Single)
-      {
-        if(this->bendSide == A)
-        {
-          if(this->BendingPlane->EvaluateFunction(point.GetData())*this->BendingPlane->EvaluateFunction(this->SourcePoints->GetPoint(0)) > 0)
-          {
-            bent = this->bendPoint(point, magnitude);
-          }
-        }
-        if(this->bendSide == B)
-        {
-          if(this->BendingPlane->EvaluateFunction(point.GetData())*this->BendingPlane->EvaluateFunction(this->SourcePoints->GetPoint(1)) > 0)
-          {
-            bent = this->bendPoint(point, magnitude);
-          }
-        }
-
-      }
-      this->TargetPoints->InsertPoint(i, bent.GetData());
-    }
-
-    transform->SetSigma(.0001);
-    transform->SetBasisToR();
-    transform->SetSourceLandmarks(this->SourcePointsDense);
-    transform->SetTargetLandmarks(this->TargetPoints);
-    transform->Update();
-  }
-  return transform;
+  this->updateBendTransform(magnitude);
+  return this->BendTransform;
 }
 
 //----------------------------------------------------------------------------
@@ -539,6 +546,8 @@ void vtkSlicerPlannerLogic::clearBendingData()
   this->BendingPlane = NULL;
   this->BendingPlaneLocator = NULL;
   this->bendInitialized = false;
+  this->BendTransform = NULL;
+  this->BendingPolyData = NULL;
 }
 
 //----------------------------------------------------------------------------
