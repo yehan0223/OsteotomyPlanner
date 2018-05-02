@@ -221,15 +221,24 @@ void qSlicerPlannerModuleWidgetPrivate::clearControlPoints(vtkMRMLScene* scene)
 void qSlicerPlannerModuleWidgetPrivate::clearBendingData(vtkMRMLScene* scene)
 {
   this->Fiducials = NULL;
+  std::cerr << "References before clearing bending data: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
   this->logic->clearBendingData();
+  std::cerr << "References after clearing bending data: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
 
   //reset parent transform to correct node
   vtkSmartPointer<vtkMRMLTransformNode> parentTransform = vtkMRMLModelNode::SafeDownCast(this->CurrentBendNode)->GetParentTransformNode();
   if (!parentTransform->IsA("vtkMRMLLinearTransformNode"))
   {     
+      std::cerr << "References before unobserve 1: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
       vtkMRMLModelNode::SafeDownCast(this->CurrentBendNode)->SetAndObserveTransformNodeID(parentTransform->GetParentTransformNode()->GetID());
+      std::cerr << "References after unobserve 1: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
+      parentTransform->SetAndObserveTransformToParent(NULL);
+      std::cerr << "References after unobserve 2: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
+      scene->RemoveNodeReferences(parentTransform);
       scene->RemoveNode(parentTransform);
+      std::cerr << "References after node remove: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
       parentTransform = NULL;
+      std::cerr << "References after node null: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
   }
   
 
@@ -401,8 +410,13 @@ void qSlicerPlannerModuleWidgetPrivate::computeTransform(vtkMRMLScene* scene)
     this->logic->setBendSide(vtkSlicerPlannerLogic::B);
   }
   this->ThinPlateTransform = this->logic->getBendTransform(this->BendMagnitude);
+  std::cerr << "References after get: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
   BendingTransformNode->SetAndObserveTransformToParent(this->ThinPlateTransform);
+  //BendingTransformNode->ApplyTransform(this->ThinPlateTransform);
+  std::cerr << "References after observe 1: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
   vtkMRMLModelNode::SafeDownCast(this->CurrentBendNode)->SetAndObserveTransformNodeID(BendingTransformNode->GetID());
+  std::cerr << "References after observe 2: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
+
 
   //
  /* vtkNew<vtkTransformPolyDataFilter> transform;
@@ -1161,13 +1175,15 @@ void qSlicerPlannerModuleWidgetPrivate::hardenTransforms(bool hardenLinearOnly)
         // non-linear transform hardening
         if (!hardenLinearOnly)
         {
-            std::cerr << "Harden bend" << std::endl;
+          std::cerr << "References before harden: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
           this->updatePlanesFromModel(childModel->GetScene(), childModel);
           childModel->ApplyTransform(transformNode->GetTransformToParent());
+          std::cerr << "References immediately after harden: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
           transformNode->SetAndObserveTransformToParent(NULL);
           vtkNew<vtkMatrix4x4> hardeningMatrix;
           hardeningMatrix->Identity();
           transformNode->SetMatrixTransformFromParent(hardeningMatrix.GetPointer());
+          std::cerr << "References after setting transform to parent to null: " << this->ThinPlateTransform->GetReferenceCount() << std::endl;
         }
       }
       planeNode->EndModify(m2);
@@ -1360,9 +1376,9 @@ void qSlicerPlannerModuleWidget::setMRMLScene(vtkMRMLScene* scene)
     this->mrmlScene(), vtkMRMLScene::NodeRemovedEvent,
     this, SLOT(onNodeRemovedEvent(vtkObject*, vtkObject*)));
 
-  this->qvtkReconnect(
+ /* this->qvtkReconnect(
     this->mrmlScene(), vtkMRMLScene::StartCloseEvent,
-    this, SLOT(finishPlanButtonClicked()));
+    this, SLOT(finishPlanButtonClicked()));*/
 }
 
 //-----------------------------------------------------------------------------
@@ -1726,12 +1742,12 @@ void qSlicerPlannerModuleWidget::placeFiducialButtonClicked()
 void qSlicerPlannerModuleWidget::cancelBendButtonClicked()
 {
   Q_D(qSlicerPlannerModuleWidget);
-  d->BendMagnitude = 0;
+  /*d->BendMagnitude = 0;
   d->BendMagnitudeSlider->setValue(0);
   if(d->bendingActive)
   {
     d->computeTransform(this->mrmlScene());
-  }
+  }*/
   d->clearControlPoints(this->mrmlScene());
   d->clearBendingData(this->mrmlScene());
   d->bendingActive = false;
@@ -1976,6 +1992,7 @@ void qSlicerPlannerModuleWidget::finishPlanButtonClicked()
     d->hideTransforms();
     d->hardenTransforms(false);
     d->clearControlPoints(this->mrmlScene());
+    d->clearBendingData(this->mrmlScene());
     this->plannerLogic()->clearModelsAndData();
     d->PreOpSet = false;
   }

@@ -477,14 +477,17 @@ void vtkSlicerPlannerLogic::initializeBend(vtkPoints* inputFiducials, vtkMRMLMod
   this->bendInitialized =  true;
 
   this->BendTransform = vtkSmartPointer<vtkThinPlateSplineTransform>::New();
+  std::cerr << "References after creation: " << this->BendTransform->GetReferenceCount() << std::endl;
   this->BendTransform->SetSigma(.0001);
   this->BendTransform->SetBasisToR();
   this->BendTransform->SetSourceLandmarks(this->SourcePointsDense);
+
 }
 
 void vtkSlicerPlannerLogic::updateBendTransform(double magnitude)
 {
-    if (this->bendInitialized)
+
+  if (this->bendInitialized)
     {
 
         this->TargetPoints = vtkSmartPointer<vtkPoints>::New();
@@ -523,6 +526,8 @@ void vtkSlicerPlannerLogic::updateBendTransform(double magnitude)
         this->BendTransform->SetTargetLandmarks(this->TargetPoints);
         this->BendTransform->Update();
     }
+    std::cerr << "References after update: " << this->BendTransform->GetReferenceCount() << std::endl;
+
 }
 
 //----------------------------------------------------------------------------
