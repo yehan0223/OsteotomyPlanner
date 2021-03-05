@@ -19,12 +19,13 @@ include(${Slicer_USE_FILE})
 
 #-----------------------------------------------------------------------------
 # Extension modules
-add_subdirectory(Planes)
-add_subdirectory(SplitModel)
-add_subdirectory(Planner)
+# add_subdirectory(Planes)
+# add_subdirectory(SplitModel)
+# add_subdirectory(Planner)
 add_subdirectory(ShrinkWrap)
 add_subdirectory(OsteotomyModelToModelDistance)
 add_subdirectory(ReplayPlan)
+add_subdirectory(OsteotomyPlanner)
 
 #-----------------------------------------------------------------------------
 include(${Slicer_EXTENSION_CPACK})
